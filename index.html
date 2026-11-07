@@ -1,0 +1,737 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<title>Paddock Archive</title>
+<style>
+:root{
+  --bg:#0b0b0f; --panel:#14141b; --panel2:#1b1b25; --line:#262633;
+  --text:#ececf1; --muted:#8b8ba0; --red:#e10600; --red2:#ff3b30;
+}
+*{box-sizing:border-box;margin:0;scrollbar-width:none}
+*::-webkit-scrollbar{width:0;height:0;display:none}
+html,body{height:100%}
+body{background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:14px;padding:12px 20px;border-bottom:1px solid var(--line);background:linear-gradient(90deg,#17070a,var(--bg) 60%)}
+.logo{font-weight:800;letter-spacing:.14em;text-transform:uppercase;font-size:15px}
+.logo b{color:var(--red)}
+.stripe{width:34px;height:6px;background:repeating-linear-gradient(135deg,var(--red) 0 6px,#fff 6px 8px);border-radius:2px}
+.btn{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:8px 13px;cursor:pointer;font:inherit;transition:.15s}
+.btn:hover{border-color:var(--red);background:#2a1114}
+.btn.primary{background:var(--red);border-color:var(--red)}
+.btn.primary:hover{background:var(--red2)}
+.btn[disabled]{opacity:.4;pointer-events:none}
+main{flex:1;display:grid;grid-template-columns:340px minmax(0,1fr);min-height:0}
+aside{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column;min-height:0}
+.search{padding:12px}
+.search input{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:9px 12px;font:inherit;outline:none}
+.search input:focus{border-color:var(--red)}
+.progress{padding:0 14px 10px;color:var(--muted);font-size:12px}
+.bar{height:3px;background:var(--line);border-radius:3px;margin-top:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--red);width:0;transition:.3s}
+#list{overflow:auto;flex:1;padding:0 8px 16px}
+.side-foot{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+.side-foot .btn{flex:1}
+.season{margin-top:6px}
+.season>summary{list-style:none;cursor:pointer;padding:9px 8px;font-weight:700;letter-spacing:.08em;color:var(--muted);display:flex;justify-content:space-between;user-select:none}
+.season>summary::-webkit-details-marker{display:none}
+.season>summary span:last-child{font-weight:400;font-size:12px}
+.item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;border-left:3px solid transparent;position:relative}
+.item:hover{background:var(--panel2)}
+.item.active{background:#2a1114;border-left-color:var(--red)}
+.num{min-width:26px;height:26px;border-radius:6px;background:var(--bg);display:grid;place-items:center;font-size:12px;color:var(--muted);font-weight:700}
+.item.active .num{background:var(--red);color:#fff}
+.item.done .num{background:#12301d;color:#4ade80}
+.item .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.item.done .t{color:var(--muted)}
+.item .x{opacity:0;color:var(--muted);border:0;background:none;cursor:pointer;font-size:16px;padding:0 4px}
+.item .x.ed{font-size:13px}
+.item:hover .x{opacity:1}
+.item .x:hover{color:var(--red2)}
+
+/* ---- stage: video + results ---- */
+.stage{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:24px;align-items:start;overflow:auto;padding:22px 26px}
+.col-main{min-width:0}
+.wrap{width:100%;max-width:1100px;margin:0 auto}
+.player{position:relative;width:100%;aspect-ratio:16/9;background:#000;border-radius:12px;overflow:hidden;box-shadow:0 20px 60px #000a,0 0 0 1px var(--line)}
+.player iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.empty{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:var(--muted);padding:30px}
+.empty h2{color:var(--text);margin-bottom:8px}
+.meta{max-width:1100px;width:100%;margin:18px auto 0}
+.meta h1{font-size:22px;line-height:1.25}
+.meta .sub{color:var(--muted);margin-top:4px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.hint{background:#2a1114;border:1px solid #5a1b20;color:#ffb4ae;border-radius:8px;padding:9px 12px;margin:14px auto 0;max-width:1100px;width:100%;font-size:13px;display:none}
+
+/* ---- control bar ---- */
+.ctrl{margin-top:12px;display:none;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;flex-wrap:wrap}
+.ctrl button,.ctrl select{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:13px;transition:.15s}
+.ctrl button:hover,.ctrl select:hover{border-color:var(--red)}
+.ctrl .play{background:var(--red);border-color:var(--red);width:42px;height:34px;font-size:15px;padding:0}
+.ctrl .play:hover{background:var(--red2)}
+.ctrl .time{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12px;min-width:46px;text-align:center}
+.ctrl input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:linear-gradient(90deg,var(--red) var(--p,0%),var(--line) var(--p,0%));outline:none;cursor:pointer}
+.ctrl input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:#fff;border:0}
+.ctrl input[type=range]::-moz-range-thumb{width:13px;height:13px;border-radius:50%;background:#fff;border:0}
+#cSeek{flex:1;min-width:140px}
+#cVolR{width:80px}
+.sep{width:1px;height:22px;background:var(--line)}
+
+/* toàn màn hình: giữ thanh điều khiển */
+.wrap:fullscreen{display:flex;flex-direction:column;background:#000;max-width:none;width:100vw;height:100vh;margin:0}
+.wrap:fullscreen .player{flex:1;min-height:0;aspect-ratio:auto;border-radius:0;box-shadow:none}
+.wrap:fullscreen .ctrl{margin:0;border-radius:0;border-width:1px 0 0 0}
+
+/* ---- results panel ---- */
+.col-res{position:sticky;top:0;max-height:calc(100vh - 100px);display:flex;flex-direction:column;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+.card-h{padding:14px 14px 12px;border-bottom:1px solid var(--line)}
+.eyebrow{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.eyebrow b{color:var(--red)}
+.pick{display:flex;gap:6px;margin-top:10px}
+.pick input,.pick select,.dlg-in{background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:7px 9px;font:inherit;font-size:13px;outline:none;min-width:0}
+.pick input{width:76px}
+.pick select{flex:1}
+.pick input:focus,.pick select:focus,.dlg-in:focus{border-color:var(--red)}
+.pick .btn{padding:6px 10px}
+.seg{display:flex;gap:4px;margin-top:10px;background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:3px}
+.seg button{flex:1;background:none;border:0;color:var(--muted);border-radius:6px;padding:5px 0;cursor:pointer;font:inherit;font-size:12.5px}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:var(--red);color:#fff;font-weight:700}
+.rbody{overflow:auto;min-height:0}
+.rmsg{padding:26px 18px;color:var(--muted);text-align:center;font-size:13px}
+.rhead{padding:14px 14px 10px}
+.rhead h2{font-size:17px;line-height:1.25}
+.rhead p{color:var(--muted);font-size:12.5px;margin-top:3px}
+.rhead p b{color:var(--text)}
+.rows{padding:0 8px 10px}
+.r{display:flex;align-items:center;gap:9px;padding:7px 6px;border-radius:8px}
+.r:hover{background:var(--panel2)}
+.pos{min-width:28px;height:26px;border-radius:6px;background:var(--bg);display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--muted)}
+.pos.p1{background:#f5c542;color:#1a1400}.pos.p2{background:#c0c4cc;color:#14151a}.pos.p3{background:#cd7f32;color:#1b0e00}
+.tc{width:4px;height:30px;border-radius:2px;background:#555;flex:none}
+.dn{flex:1;min-width:0}
+.dn .n{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dn .n b{margin-right:6px;letter-spacing:.04em}
+.dn small,.rt small{display:block;color:var(--muted);font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rt{text-align:right;font-variant-numeric:tabular-nums;font-size:13px;white-space:nowrap}
+.fl{display:inline-block;background:#8a2be2;color:#fff;font-size:9.5px;font-weight:800;border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:1px}
+.up{color:#4ade80}.dw{color:#ff6b61}
+
+dialog{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:14px;padding:22px;width:min(640px,92vw)}
+dialog::backdrop{background:#000b}
+dialog h3{margin-bottom:6px}
+dialog p{color:var(--muted);font-size:13px;margin-bottom:10px}
+dialog code{background:var(--bg);padding:1px 6px;border-radius:4px}
+dialog label{display:block;color:var(--muted);font-size:12px;margin:12px 0 5px}
+.dlg-in{width:100%;padding:9px 11px;font-size:14px}
+textarea{width:100%;height:220px;background:var(--bg);border:1px solid var(--line);border-radius:8px;color:var(--text);padding:10px;font:12.5px/1.5 ui-monospace,Consolas,monospace;resize:vertical;outline:none}
+textarea:focus{border-color:var(--red)}
+.row{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+
+/* ===== neon racing theme ===== */
+:root{--orange:#ff8a1f;--green:#39ff88;--blue:#3da5ff}
+main{grid-template-columns:390px minmax(0,1fr)}
+body{background:radial-gradient(900px 420px at 78% -8%,rgba(225,6,0,.13),transparent 70%),radial-gradient(700px 400px at 0% 100%,rgba(61,165,255,.06),transparent 70%),var(--bg)}
+header{position:relative;background:linear-gradient(90deg,#1c080b,rgba(11,11,15,.6) 60%);border-bottom:1px solid #2b1014}
+header::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--red) 25%,#ff7a00 50%,var(--red) 75%,transparent);background-size:200% 100%;box-shadow:0 0 14px 1px rgba(225,6,0,.7);animation:sweep 6s linear infinite}
+@keyframes sweep{to{background-position:200% 0}}
+@media(prefers-reduced-motion:reduce){header::after{animation:none}}
+.logo b{text-shadow:0 0 10px var(--red),0 0 22px rgba(225,6,0,.7)}
+.stripe{box-shadow:0 0 12px rgba(225,6,0,.8)}
+.btn:hover{box-shadow:0 0 12px rgba(225,6,0,.35)}
+.btn.primary{box-shadow:0 0 14px rgba(225,6,0,.55)}
+.btn.primary:hover{box-shadow:0 0 22px rgba(255,59,48,.85)}
+aside{box-shadow:6px 0 30px -18px rgba(225,6,0,.5)}
+.side-foot{display:grid;grid-template-columns:1fr 1fr}
+.side-foot .primary{grid-column:1/-1}
+.bar i{box-shadow:0 0 10px var(--red),0 0 18px rgba(225,6,0,.6)}
+.season>summary span:first-child{text-shadow:0 0 10px rgba(225,6,0,.6)}
+.item.active{background:linear-gradient(90deg,rgba(225,6,0,.22),rgba(225,6,0,.04));box-shadow:-2px 0 12px -2px var(--red)}
+.item.active .num{box-shadow:0 0 12px var(--red)}
+.player{box-shadow:0 0 0 1px #3a1519,0 0 46px -10px rgba(225,6,0,.55),0 24px 60px #000b}
+.ctrl{border-color:#2d1519;box-shadow:0 0 24px -14px var(--red)}
+.ctrl .play{box-shadow:0 0 14px rgba(225,6,0,.7)}
+.ctrl input[type=range]{box-shadow:0 0 8px -2px rgba(225,6,0,.6)}
+.ctrl input[type=range]::-webkit-slider-thumb{box-shadow:0 0 8px #fff,0 0 12px var(--red)}
+.card{border-color:#2d1519;box-shadow:0 0 30px -16px var(--red)}
+.eyebrow b{text-shadow:0 0 10px var(--red)}
+.seg button.on{box-shadow:0 0 12px rgba(225,6,0,.7)}
+.pos.p1{box-shadow:0 0 12px rgba(245,197,66,.75)}
+.pos.p2{box-shadow:0 0 12px rgba(192,196,204,.55)}
+.pos.p3{box-shadow:0 0 12px rgba(205,127,50,.7)}
+.fl{box-shadow:0 0 8px #8a2be2}
+.pick input:focus,.pick select:focus,.dlg-in:focus,.search input:focus,textarea:focus{box-shadow:0 0 10px -2px var(--red)}
+dialog{box-shadow:0 0 50px -12px rgba(225,6,0,.6)}
+
+/* badge loại buổi đua */
+.sb{--c:var(--orange);display:inline-grid;place-items:center;flex:none;min-width:34px;height:22px;padding:0 6px;border-radius:7px;border:1.5px solid var(--c);color:var(--c);font:800 11px/1 ui-monospace,Consolas,monospace;letter-spacing:.05em;background:color-mix(in srgb,var(--c) 14%,transparent);box-shadow:0 0 7px color-mix(in srgb,var(--c) 80%,transparent),inset 0 0 7px color-mix(in srgb,var(--c) 30%,transparent);text-shadow:0 0 6px var(--c);transition:.15s}
+.sb.r,.sb.sr{--c:var(--orange)}
+.sb.q,.sb.sq{--c:var(--green)}
+.sb.fp{--c:var(--blue)}
+.item:hover .sb,.item.active .sb{box-shadow:0 0 13px var(--c),inset 0 0 8px color-mix(in srgb,var(--c) 40%,transparent)}
+.meta h1 .sb{height:26px;min-width:40px;font-size:12px;margin-right:12px;vertical-align:3px}
+
+@media(max-width:1400px){
+  .stage{grid-template-columns:minmax(0,1fr)}
+  .col-res{position:static;max-height:none}
+  .rbody{overflow:visible}
+}
+@media(max-width:860px){
+  main{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  aside{order:2;border-right:0;border-top:1px solid var(--line)}
+  .stage{padding:14px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="stripe"></div>
+  <div class="logo">Paddock <b>Archive</b></div>
+</header>
+
+<main>
+  <aside>
+    <div class="search"><input id="q" placeholder="Tìm chặng đua, năm, tên GP..."></div>
+    <div class="progress"><span id="progText"></span><div class="bar"><i id="progBar"></i></div></div>
+    <div id="list"></div>
+    <div class="side-foot">
+      <button class="btn primary" id="btnAdd">+ Thêm video</button>
+      <button class="btn" id="btnExport" title="Tải file sao lưu danh sách (.json)">⬇ Sao lưu</button>
+      <button class="btn" id="btnImport" title="Nạp lại từ file sao lưu (gộp vào danh sách hiện tại)">⬆ Import</button>
+    </div>
+    <input type="file" id="impFile" accept=".json,application/json" hidden>
+  </aside>
+
+  <section class="stage">
+    <div class="col-main">
+      <div class="wrap" id="wrap">
+        <div class="player" id="player">
+          <div class="empty"><div><h2>Chưa có video nào</h2>Bấm <b>+ Thêm video</b> để dán link YouTube vào.</div></div>
+        </div>
+        <div class="ctrl" id="ctrl">
+          <button class="play" id="cPlay" title="Phát / Tạm dừng (Space)">▶</button>
+          <button id="cB60" title="Lùi 1 phút">« 1m</button>
+          <button id="cB10" title="Lùi 10 giây (J)">‹ 10s</button>
+          <button id="cF10" title="Tới 10 giây (L)">10s ›</button>
+          <button id="cF60" title="Tới 1 phút">1m »</button>
+          <span class="time" id="cTime">0:00</span>
+          <input type="range" id="cSeek" min="0" max="1000" value="0">
+          <span class="time" id="cDur">0:00</span>
+          <div class="sep"></div>
+          <button id="cVol" title="Tắt/bật tiếng (M)">🔊</button>
+          <input type="range" id="cVolR" min="0" max="100" value="100" style="--p:100%">
+          <select id="cSpeed" title="Tốc độ phát">
+            <option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1" selected>1×</option>
+            <option value="1.25">1.25×</option><option value="1.5">1.5×</option><option value="1.75">1.75×</option><option value="2">2×</option>
+          </select>
+          <button id="cFs" title="Toàn màn hình (F)">⛶</button>
+        </div>
+      </div>
+      <div class="hint" id="hint">
+        Nếu player báo lỗi 153 / "Video unavailable": đang mở file trực tiếp (file://) thì YouTube chặn.
+        Hãy chạy file <code>mo-f1-archive.bat</code> để mở qua localhost. Video Private cũng không nhúng được, đổi sang Unlisted nhé.
+      </div>
+      <div class="meta">
+        <h1 id="title"></h1>
+        <div class="sub" id="sub"></div>
+        <div class="actions">
+          <button class="btn" id="prev">← Trước</button>
+          <button class="btn" id="next">Sau →</button>
+          <button class="btn" id="done">Đánh dấu đã xem</button>
+          <label class="btn" style="display:flex;align-items:center;gap:6px"><input type="checkbox" id="autoNext" checked> Tự chuyển video</label>
+          <a class="btn" id="yt" target="_blank" rel="noopener" style="text-decoration:none">Mở trên YouTube ↗</a>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-res">
+      <div class="card">
+        <div class="card-h">
+          <div class="eyebrow">Kết quả <b>chặng đua</b></div>
+          <div class="pick">
+            <input type="number" id="rYear" min="1950" max="2100" placeholder="Năm">
+            <select id="rRace"><option value="">Chọn chặng…</option></select>
+            <button class="btn" id="rAuto" title="Tự nhận diện lại từ tiêu đề + mùa giải">↻</button>
+          </div>
+          <div class="seg" id="rSeg">
+            <button data-s="race">Race</button><button data-s="quali">Qualifying</button><button data-s="sprint">Sprint</button>
+          </div>
+        </div>
+        <div class="rbody" id="rBody"><div class="rmsg">Chọn một video để xem kết quả chặng đua.</div></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <h3>Thêm video</h3>
+  <p>Mỗi dòng một video, định dạng: <code>link | tên | mùa giải</code> (tên và mùa giải có thể bỏ trống).<br>
+  Ví dụ: <code>https://youtu.be/xxxxxxxxxxx | Monaco Grand Prix - Qualifying | 2008</code><br>
+  Ghi đúng tên chặng và năm thì thứ tự và kết quả sẽ tự nhận diện. Có chữ "Qualifying" hoặc "Sprint" trong tên thì hiện kết quả buổi đó.</p>
+  <textarea id="ta" placeholder="https://youtu.be/xxxxxxxxxxx | Monaco Grand Prix - Race | 2008"></textarea>
+  <div class="row">
+    <button class="btn" id="cancel">Đóng</button>
+    <button class="btn primary" id="save">Thêm vào danh sách</button>
+  </div>
+</dialog>
+
+<dialog id="editDlg">
+  <h3>Sửa video</h3>
+  <label for="eTitle">Tên (ví dụ: British Grand Prix - Qualifying)</label>
+  <input class="dlg-in" id="eTitle">
+  <label for="eSeason">Mùa giải / năm</label>
+  <input class="dlg-in" id="eSeason" placeholder="2025">
+  <div class="row">
+    <button class="btn" id="eCancel">Huỷ</button>
+    <button class="btn primary" id="eSave">Lưu</button>
+  </div>
+</dialog>
+
+<script>
+const KEY = 'f1_archive_v1';
+const $ = id => document.getElementById(id);
+
+function fixState(s){ s = s || {}; s.videos = s.videos||[]; s.watched = s.watched||[]; s.current = s.current||null; s.races = s.races||{}; return s; }
+let state = load();
+function load(){ let s=null; try{ s = JSON.parse(localStorage.getItem(KEY)); }catch(e){} return fixState(s); }
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){} }
+
+function parseId(s){
+  s = s.trim();
+  const m = s.match(/(?:v=|youtu\.be\/|embed\/|live\/|shorts\/)([\w-]{11})/);
+  if(m) return m[1];
+  return /^[\w-]{11}$/.test(s) ? s : null;
+}
+function esc(s){ return String(s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ---------- nhận diện năm / buổi đua, sắp xếp ---------- */
+const fold = s => String(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/grand prix/g,' ').replace(/\s+/g,' ').trim();
+const guessYear = v => ((String(v.season||'').match(/(?:19|20)\d{2}/) || String(v.title).match(/(?:19|20)\d{2}/) || [])[0]) || '';
+const validYear = y => /^\d{4}$/.test(String(y)) && +y >= 1950 && +y <= 2100;
+const seasonOf = v => v.season || guessYear(v) || 'Khác';
+function sessionOf(title){ // race | quali | sprint | sq (sprint shootout) | fp (practice)
+  const t = fold(title);
+  if(/shootout|sprint quali/.test(t)) return 'sq';
+  if(/qualif|quali|phan hang/.test(t)) return 'quali';
+  if(/sprint/.test(t)) return 'sprint';
+  if(/practice|\bfp[123]\b|thu nghiem/.test(t)) return 'fp';
+  return 'race';
+}
+const SESS_W = {fp:0, sq:1, sprint:2, quali:3, race:4};
+const BADGE = {race:'R', quali:'Q', sprint:'SR', sq:'SQ', fp:'FP'};
+const BADGE_LABEL = {race:'Race', quali:'Qualifying', sprint:'Sprint', sq:'Sprint Qualifying', fp:'Free Practice'};
+function badge(v){
+  const s = sessionOf(v.title); let txt = BADGE[s];
+  if(s === 'fp'){ const n = fold(v.title).match(/(?:practice|fp)\s*([123])/); if(n) txt += n[1]; }
+  return `<span class="sb ${s==='quali'?'q':s==='sprint'?'sr':s==='race'?'r':s}" title="${BADGE_LABEL[s]}">${txt}</span>`;
+}
+// bỏ phần "- Race", "- Qualifying"... ở cuối tên vì đã có badge
+function cleanTitle(t){
+  const re = /\s*[-–—|:·(]*\s*\b(?:sprint\s*(?:shootout|qualifying|quali|race)?|qualifying|qualification|quali|free\s*practice(?:\s*\d)?|practice(?:\s*\d)?|fp\s*[123]|race)\b\)?\s*$/i;
+  let s = String(t).trim(), prev;
+  do{ prev = s; s = s.replace(re, '').trim(); }while(s !== prev && s);
+  return s || String(t);
+}
+const setTitle = v => { $('title').innerHTML = badge(v) + esc(cleanTitle(v.title)); };
+
+function sorted(list){
+  return list.map((v,i)=>[v,i]).sort((a,b)=>{
+    const ra = state.races[a[0].id]?.round ?? 999, rb = state.races[b[0].id]?.round ?? 999;
+    return (ra-rb) || (SESS_W[sessionOf(a[0].title)] - SESS_W[sessionOf(b[0].title)]) || (a[1]-b[1]);
+  }).map(x=>x[0]);
+}
+function grouped(list){
+  const g = {};
+  list.forEach(v => (g[seasonOf(v)] ||= []).push(v));
+  return Object.keys(g).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true})).map(k=>[k, sorted(g[k])]);
+}
+function visible(){
+  const q = $('q').value.trim().toLowerCase();
+  return state.videos.filter(v => !q || (v.title+' '+seasonOf(v)).toLowerCase().includes(q));
+}
+function order(){ return grouped(state.videos).flatMap(x=>x[1]); }
+
+function render(){
+  const list = $('list'); list.innerHTML = '';
+  grouped(visible()).forEach(([s, vs]) => {
+    const d = document.createElement('details');
+    d.className = 'season'; d.open = true;
+    const seen = vs.filter(v=>state.watched.includes(v.id)).length;
+    d.innerHTML = `<summary><span>${esc(s)}</span><span>${seen}/${vs.length}</span></summary>`;
+    vs.forEach((v,i) => {
+      const el = document.createElement('div');
+      el.className = 'item' + (v.id===state.current?' active':'') + (state.watched.includes(v.id)?' done':'');
+      el.innerHTML = `<div class="num">${state.watched.includes(v.id)?'✓':i+1}</div>${badge(v)}<div class="t" title="${esc(v.title)}">${esc(cleanTitle(v.title))}</div><button class="x ed" title="Sửa tên / năm">✎</button><button class="x rm" title="Xoá">×</button>`;
+      el.onclick = () => play(v.id);
+      el.querySelector('.ed').onclick = e => { e.stopPropagation(); openEdit(v.id); };
+      el.querySelector('.rm').onclick = e => { e.stopPropagation(); remove(v.id); };
+      d.appendChild(el);
+    });
+    list.appendChild(d);
+  });
+  const total = state.videos.length, seenAll = state.videos.filter(v=>state.watched.includes(v.id)).length;
+  $('progText').textContent = total ? `Đã xem ${seenAll}/${total} video` : '';
+  $('progBar').style.width = total ? (seenAll/total*100)+'%' : '0';
+}
+
+function play(id, auto=true){
+  const v = state.videos.find(x=>x.id===id); if(!v) return;
+  state.current = id; save();
+  mountPlayer(id, v.title, auto);
+  setTitle(v);
+  $('sub').textContent = v.season || guessYear(v) || '';
+  $('yt').href = 'https://www.youtube.com/watch?v=' + id;
+  $('done').textContent = state.watched.includes(id) ? 'Bỏ đánh dấu đã xem' : 'Đánh dấu đã xem';
+  const o = order(), i = o.findIndex(x=>x.id===id);
+  $('prev').disabled = i<=0; $('next').disabled = i>=o.length-1;
+  $('hint').style.display = location.protocol==='file:' ? 'block' : 'none';
+  render();
+  loadRes(v);
+}
+
+/* ================= Player (YouTube IFrame API) ================= */
+let yt = null, apiState = 'loading', pending = null; // loading | ready | failed
+(function(){
+  const s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  s.onerror = () => { apiState = 'failed'; if(pending) mountPlayer(...pending); };
+  document.head.appendChild(s);
+})();
+window.onYouTubeIframeAPIReady = () => { apiState = 'ready'; if(pending) mountPlayer(...pending); };
+
+function mountPlayer(id, title, auto){
+  pending = [id, title, auto];
+  if(apiState === 'loading') return;
+  if(apiState === 'failed'){ // dự phòng: iframe thường, vẫn có thanh điều khiển gốc
+    $('player').innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?rel=0&controls=1&autoplay=${auto?1:0}" title="${esc(title)}" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>`;
+    $('ctrl').style.display = 'none'; pending = null; return;
+  }
+  $('ctrl').style.display = 'flex';
+  pending = null;
+  if(yt && yt.loadVideoById){ auto ? yt.loadVideoById(id) : yt.cueVideoById(id); return; }
+  $('player').innerHTML = '<div id="ytTarget"></div>';
+  const vars = {autoplay: auto?1:0, controls:1, rel:0, playsinline:1, fs:0, iv_load_policy:3};
+  if(location.protocol.startsWith('http')) vars.origin = location.origin;
+  yt = new YT.Player('ytTarget', {videoId:id, width:'100%', height:'100%', playerVars:vars,
+    events:{ onStateChange:onYtState }});
+}
+function onYtState(e){
+  $('cPlay').textContent = e.data === 1 ? '❚❚' : '▶';
+  if(e.data === 1){ try{ $('cSpeed').value = String(yt.getPlaybackRate()); }catch(_){} }
+  if(e.data === 0){ // hết video
+    const id = state.current;
+    if(id && !state.watched.includes(id)){ state.watched.push(id); save(); render(); }
+    if($('autoNext').checked && !$('next').disabled) $('next').click();
+  }
+}
+
+const fmt = s => { s = Math.max(0, Math.floor(s||0)); const h=Math.floor(s/3600), m=Math.floor(s%3600/60), x=s%60;
+  return (h ? h+':'+String(m).padStart(2,'0') : m) + ':' + String(x).padStart(2,'0'); };
+let seeking = false;
+setInterval(() => {
+  if(!yt || !yt.getCurrentTime || seeking) return;
+  try{
+    const d = yt.getDuration()||0, t = yt.getCurrentTime()||0, p = d ? t/d*100 : 0;
+    $('cTime').textContent = fmt(t); $('cDur').textContent = fmt(d);
+    $('cSeek').value = p*10; $('cSeek').style.setProperty('--p', p+'%');
+  }catch(_){}
+}, 500);
+const skip = n => { if(yt && yt.seekTo) yt.seekTo(yt.getCurrentTime()+n, true); };
+const toggle = () => { if(yt && yt.getPlayerState) yt.getPlayerState()===1 ? yt.pauseVideo() : yt.playVideo(); };
+const mute = () => { if(!yt) return; if(yt.isMuted()){ yt.unMute(); $('cVol').textContent='🔊'; } else { yt.mute(); $('cVol').textContent='🔇'; } };
+const fs = () => document.fullscreenElement ? document.exitFullscreen() : $('wrap').requestFullscreen();
+$('cPlay').onclick = toggle;
+$('cB60').onclick = () => skip(-60); $('cB10').onclick = () => skip(-10);
+$('cF10').onclick = () => skip(10);  $('cF60').onclick = () => skip(60);
+$('cVol').onclick = mute; $('cFs').onclick = fs;
+$('cSeek').oninput = e => { seeking = true; const d = yt?yt.getDuration():0; $('cTime').textContent = fmt(d*e.target.value/1000); e.target.style.setProperty('--p', e.target.value/10+'%'); };
+$('cSeek').onchange = e => { if(yt) yt.seekTo(yt.getDuration()*e.target.value/1000, true); seeking = false; e.target.blur(); };
+$('cVolR').oninput = e => { if(yt){ yt.setVolume(+e.target.value); if(yt.isMuted()&&+e.target.value>0){yt.unMute();$('cVol').textContent='🔊';} } e.target.style.setProperty('--p', e.target.value+'%'); };
+$('cVolR').onchange = e => e.target.blur();
+$('cSpeed').onchange = e => { if(yt) yt.setPlaybackRate(+e.target.value); e.target.blur(); };
+
+/* ================= Kết quả (Jolpica F1 API) ================= */
+const API = 'https://api.jolpi.ca/ergast/f1';
+const CK = 'f1_cache_v1';
+let cache = {}; try{ cache = JSON.parse(localStorage.getItem(CK)) || {}; }catch(_){}
+const saveCache = () => { try{ localStorage.setItem(CK, JSON.stringify(cache)); }catch(_){} };
+const TEAM = {red_bull:'#3671C6',ferrari:'#E8002D',mercedes:'#27F4D2',mclaren:'#FF8000',aston_martin:'#229971',alpine:'#FF87BC',
+  williams:'#64C4FF',rb:'#6692FF',sauber:'#52E252',haas:'#B6BABD',alphatauri:'#5E8FAA',alfa:'#C92D4B',renault:'#FFF500',
+  toro_rosso:'#469BFF',racing_point:'#F596C8',force_india:'#F596C8',lotus_f1:'#FFB800',cadillac:'#9aa3ad',audi:'#F50537'};
+const EP = {race:['results','Results','Race'], quali:['qualifying','QualifyingResults','Qualifying'], sprint:['sprint','SprintResults','Sprint']};
+let resToken = 0, curSess = 'race', curRace = null;
+
+async function getJSON(url){
+  const r = await fetch(url);
+  if(r.status === 429) throw new Error('Quá nhiều yêu cầu, thử lại sau ít phút.');
+  if(!r.ok) throw new Error('Lỗi máy chủ ('+r.status+')');
+  return r.json();
+}
+async function getSchedule(y){
+  const k = 'sched'+y; if(cache[k]) return cache[k];
+  const j = await getJSON(`${API}/${y}.json?limit=100`);
+  const races = j.MRData.RaceTable.Races;
+  if(races.length){ cache[k] = races; saveCache(); }
+  return races;
+}
+async function getSession(y, rd, s){
+  const k = `${s}${y}-${rd}`; if(cache[k]) return cache[k];
+  const [ep, key] = EP[s];
+  const j = await getJSON(`${API}/${y}/${rd}/${ep}.json?limit=100`);
+  const race = j.MRData.RaceTable.Races[0] || null;
+  if(race && race[key] && race[key].length){ cache[k] = race; saveCache(); }
+  return race;
+}
+
+function matchRound(title, races){
+  const t = fold(title); let best = 0, hit = [];
+  races.forEach(r => {
+    const kws = [r.raceName, r.Circuit.Location.locality, r.Circuit.Location.country, r.Circuit.circuitName].map(fold).filter(k => k.length >= 4);
+    const sc = Math.max(0, ...kws.map(k => t.includes(k) ? k.length : 0));
+    if(sc > best){ best = sc; hit = [r]; } else if(sc === best && sc > 0) hit.push(r);
+  });
+  return hit.length === 1 ? hit[0].round : null; // trùng nhiều chặng thì để người dùng chọn
+}
+
+// Tự nhận diện chặng cho mọi video để sắp xếp theo lịch đua trong năm
+let detecting = false;
+async function autoDetectAll(){
+  if(detecting) return; detecting = true;
+  try{
+    let changed = false;
+    for(const v of state.videos){
+      if(state.races[v.id]) continue;
+      const y = guessYear(v); if(!validYear(y)) continue;
+      try{
+        const rd = matchRound(v.title, await getSchedule(y));
+        if(rd){ state.races[v.id] = {year:+y, round:+rd}; changed = true; }
+      }catch(e){ break; } // mất mạng thì dừng, lần sau thử lại
+    }
+    if(changed){ save(); render(); }
+  } finally { detecting = false; }
+}
+
+function rMsg(t){ $('rBody').innerHTML = `<div class="rmsg">${t}</div>`; }
+function setSeg(s){ document.querySelectorAll('#rSeg button').forEach(b => b.classList.toggle('on', b.dataset.s === s)); }
+
+async function fillRaces(year, selected){
+  const sel = $('rRace');
+  sel.innerHTML = '<option value="">Đang tải…</option>';
+  const races = await getSchedule(year);
+  sel.innerHTML = '<option value="">Chọn chặng…</option>' + races.map(r =>
+    `<option value="${r.round}">R${r.round} · ${esc(r.raceName.replace(' Grand Prix',''))}</option>`).join('');
+  if(selected) sel.value = String(selected);
+  return races;
+}
+
+async function loadRes(v){
+  const tok = ++resToken;
+  const s = sessionOf(v.title); curSess = EP[s] ? s : null; setSeg(curSess);
+  const m = state.races[v.id];
+  const year = m ? m.year : guessYear(v);
+  $('rYear').value = year || '';
+  curRace = null;
+  if(!validYear(year)){ $('rRace').innerHTML = '<option value="">Chọn chặng…</option>'; rMsg('Nhập năm và chọn chặng để xem kết quả.'); return; }
+  rMsg('Đang tải…');
+  try{
+    const races = await fillRaces(year, m && m.round);
+    if(tok !== resToken) return;
+    let round = m ? m.round : null;
+    if(!round){
+      round = matchRound(v.title, races);
+      if(round){ state.races[v.id] = {year:+year, round:+round}; save(); render(); }
+    }
+    if(!round){ rMsg('Chưa tự nhận diện được chặng này. Hãy chọn chặng ở ô phía trên.'); return; }
+    $('rRace').value = String(round);
+    curRace = {year:+year, round:+round};
+    if(!curSess){ rMsg('Buổi này (Practice / Sprint Shootout) chưa có dữ liệu. Chọn tab Race, Qualifying hoặc Sprint ở trên để xem.'); return; }
+    await showRace(tok);
+  }catch(e){ if(tok === resToken) rMsg('Không tải được dữ liệu (cần có mạng).<br><small>'+esc(e.message)+'</small>'); }
+}
+
+async function showRace(tok){
+  if(!curRace || !EP[curSess]) return;
+  setSeg(curSess);
+  rMsg('Đang tải kết quả…');
+  const s = curSess;
+  try{
+    const race = await getSession(curRace.year, curRace.round, s);
+    if(tok !== resToken) return;
+    const rows = race && race[EP[s][1]];
+    if(!rows || !rows.length){ rMsg(s === 'race' ? 'Chặng này chưa có kết quả.' : `Chưa có dữ liệu ${EP[s][2]} cho chặng này (chặng không có buổi này hoặc chưa diễn ra).`); return; }
+    renderSession(race, s);
+  }catch(e){ if(tok === resToken) rMsg('Không tải được kết quả (cần có mạng).<br><small>'+esc(e.message)+'</small>'); }
+}
+
+function renderSession(race, s){
+  const L = race.Circuit.Location;
+  const date = new Date(race.date + 'T00:00:00').toLocaleDateString('vi-VN', {day:'numeric', month:'long', year:'numeric'});
+  const data = race[EP[s][1]];
+  const rows = data.map(r => {
+    const d = r.Driver, pos = +r.position;
+    const code = d.code || d.familyName.slice(0,3).toUpperCase();
+    const pcls = pos<=3 ? ' p'+pos : '';
+    const color = TEAM[r.Constructor.constructorId] || '#666';
+    const name = `<div class="n"><b>${esc(code)}</b>${esc(d.givenName)} ${esc(d.familyName)}`;
+    if(s === 'quali'){
+      const best = r.Q3 || r.Q2 || r.Q1 || '—', seg = r.Q3 ? 'Q3' : r.Q2 ? 'Q2' : r.Q1 ? 'Q1' : '';
+      return `<div class="r"><div class="pos${pcls}">${esc(r.position)}</div><i class="tc" style="background:${color};box-shadow:0 0 8px ${color}"></i>
+        <div class="dn">${name}</div><small>${esc(r.Constructor.name)}</small></div>
+        <div class="rt">${esc(best)}<small>${seg}</small></div></div>`;
+    }
+    const grid = +r.grid;
+    let gridTxt = grid ? 'P'+grid : 'Pit lane';
+    if(grid && !isNaN(pos)){ const df = grid - pos; if(df>0) gridTxt += ` <span class="up">▲${df}</span>`; else if(df<0) gridTxt += ` <span class="dw">▼${-df}</span>`; }
+    const time = r.Time ? r.Time.time : r.status;
+    const fl = r.FastestLap && r.FastestLap.rank === '1' ? `<span class="fl" title="Vòng nhanh nhất ${esc(r.FastestLap.Time?.time||'')}">FL</span>` : '';
+    const pts = +r.points > 0 ? `+${r.points} đ` : '';
+    return `<div class="r"><div class="pos${pcls}">${esc(r.positionText)}</div><i class="tc" style="background:${color};box-shadow:0 0 8px ${color}"></i>
+      <div class="dn">${name}${fl}</div><small>${esc(r.Constructor.name)} · ${gridTxt}</small></div>
+      <div class="rt">${esc(time)}<small>${pts}</small></div></div>`;
+  }).join('');
+  $('rBody').innerHTML = `<div class="rhead"><h2>${esc(race.raceName)}</h2>
+    <p>${esc(race.Circuit.circuitName)} · ${esc(L.locality)}, ${esc(L.country)}</p>
+    <p>Chặng ${esc(race.round)} · ${date} · <b>${EP[s][2]}</b></p></div><div class="rows">${rows}</div>`;
+}
+
+$('rYear').onchange = async e => {
+  const y = e.target.value.trim();
+  if(!validYear(y)){ rMsg('Năm không hợp lệ.'); return; }
+  rMsg('Đang tải…');
+  try{ await fillRaces(y, null); rMsg('Chọn chặng ở ô bên cạnh.'); }
+  catch(err){ rMsg('Không tải được lịch đua (cần có mạng).'); }
+};
+$('rRace').onchange = e => {
+  const y = $('rYear').value.trim(), rd = e.target.value;
+  if(!rd || !validYear(y)) return;
+  if(state.current){ state.races[state.current] = {year:+y, round:+rd, manual:true}; save(); render(); }
+  curRace = {year:+y, round:+rd};
+  if(!EP[curSess]) curSess = 'race';
+  showRace(++resToken);
+};
+$('rSeg').onclick = e => {
+  const b = e.target.closest('button'); if(!b || !curRace) return;
+  curSess = b.dataset.s; showRace(++resToken);
+};
+$('rAuto').onclick = () => {
+  const v = state.videos.find(x => x.id === state.current); if(!v) return;
+  delete state.races[v.id]; save(); loadRes(v);
+};
+
+/* ================= Sửa / xoá / thêm ================= */
+let editId = null;
+function openEdit(id){
+  const v = state.videos.find(x=>x.id===id); if(!v) return;
+  editId = id; $('eTitle').value = v.title; $('eSeason').value = v.season || '';
+  $('editDlg').showModal(); $('eTitle').focus(); $('eTitle').select();
+}
+$('eCancel').onclick = () => $('editDlg').close();
+$('eSave').onclick = () => {
+  const v = state.videos.find(x=>x.id===editId); if(!v) return;
+  v.title = $('eTitle').value.trim() || v.title;
+  v.season = $('eSeason').value.trim();
+  const m = state.races[v.id], ny = guessYear(v);
+  if(m && (!m.manual || (validYear(ny) && String(ny) !== String(m.year)))) delete state.races[v.id]; // nhận diện lại
+  save(); $('editDlg').close(); render();
+  if(v.id === state.current){ setTitle(v); $('sub').textContent = v.season || guessYear(v) || ''; loadRes(v); }
+  autoDetectAll();
+};
+['eTitle','eSeason'].forEach(id => $(id).addEventListener('keydown', e => { if(e.key==='Enter') $('eSave').click(); }));
+
+function remove(id){
+  if(!confirm('Xoá video này khỏi danh sách?')) return;
+  state.videos = state.videos.filter(v=>v.id!==id);
+  state.watched = state.watched.filter(x=>x!==id);
+  delete state.races[id];
+  if(state.current===id){ state.current=null; clearPlayer(); }
+  save(); render();
+}
+function clearPlayer(){
+  if(yt){ try{ yt.destroy(); }catch(_){} yt = null; }
+  $('player').innerHTML = '<div class="empty"><div><h2>Chọn một video</h2>Chọn chặng đua ở danh sách bên trái.</div></div>';
+  $('ctrl').style.display = 'none';
+  $('title').textContent=''; $('sub').textContent=''; $('prev').disabled=$('next').disabled=true;
+  resToken++; curRace = null; rMsg('Chọn một video để xem kết quả chặng đua.');
+}
+
+$('prev').onclick = () => { const o=order(), i=o.findIndex(x=>x.id===state.current); if(i>0) play(o[i-1].id); };
+$('next').onclick = () => { const o=order(), i=o.findIndex(x=>x.id===state.current); if(i>=0&&i<o.length-1) play(o[i+1].id); };
+$('done').onclick = () => {
+  const id = state.current; if(!id) return;
+  const k = state.watched.indexOf(id);
+  k>=0 ? state.watched.splice(k,1) : state.watched.push(id);
+  save();
+  $('done').textContent = state.watched.includes(id) ? 'Bỏ đánh dấu đã xem' : 'Đánh dấu đã xem';
+  render();
+};
+$('q').oninput = render;
+
+$('btnAdd').onclick = () => { $('ta').value=''; $('dlg').showModal(); $('ta').focus(); };
+$('cancel').onclick = () => $('dlg').close();
+$('save').onclick = () => {
+  let added=0, bad=0;
+  $('ta').value.split('\n').forEach(line => {
+    if(!line.trim()) return;
+    const [link,title,season] = line.split('|').map(s=>s.trim());
+    const id = parseId(link||'');
+    if(!id){ bad++; return; }
+    if(state.videos.some(v=>v.id===id)) return;
+    state.videos.push({id, title: title || 'Video '+id, season: season || ''});
+    added++;
+  });
+  save(); render(); $('dlg').close();
+  if(bad) alert(`${bad} dòng không đọc được link, đã bỏ qua.`);
+  if(added && !state.current) play(order()[0].id);
+  autoDetectAll();
+};
+
+// Sao lưu (tải file JSON) và Import (gộp vào danh sách hiện tại)
+$('btnExport').onclick = () => {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(state,null,1)],{type:'application/json'}));
+  a.download = 'f1-archive-backup-' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+};
+$('btnImport').onclick = () => $('impFile').click();
+$('impFile').onchange = e => {
+  const f = e.target.files[0]; e.target.value = ''; if(!f) return;
+  f.text().then(t => {
+    let obj; try{ obj = JSON.parse(t); }catch(_){ alert('File không hợp lệ.'); return; }
+    if(!obj || !Array.isArray(obj.videos)){ alert('Đây không phải file sao lưu của Paddock Archive.'); return; }
+    const inc = fixState(obj); let added = 0, upd = 0;
+    inc.videos.forEach(iv => {
+      if(!iv || !iv.id) return;
+      const ex = state.videos.find(v => v.id === iv.id);
+      if(ex){ if(ex.title !== iv.title || ex.season !== (iv.season||'')){ ex.title = iv.title || ex.title; ex.season = iv.season || ''; upd++; } }
+      else { state.videos.push({id: iv.id, title: iv.title || 'Video '+iv.id, season: iv.season || ''}); added++; }
+    });
+    inc.watched.forEach(id => { if(!state.watched.includes(id)) state.watched.push(id); });
+    Object.assign(state.races, inc.races);
+    save(); render(); autoDetectAll();
+    if(!state.current && state.videos.length) play(order()[0].id, false);
+    alert(`Đã import: thêm ${added} video mới, cập nhật ${upd} video.`);
+  });
+};
+
+document.addEventListener('keydown', e => {
+  const tag = document.activeElement.tagName;
+  if(['INPUT','TEXTAREA','SELECT'].includes(tag) || $('dlg').open || $('editDlg').open) return;
+  const k = e.key.toLowerCase();
+  if(e.key==='ArrowLeft') $('prev').click();
+  if(e.key==='ArrowRight') $('next').click();
+  if(e.key===' ' && tag!=='BUTTON'){ e.preventDefault(); toggle(); }
+  if(k==='j') skip(-10);
+  if(k==='l') skip(10);
+  if(k==='m') mute();
+  if(k==='f') fs();
+});
+
+render();
+if(state.current && state.videos.some(v=>v.id===state.current)) play(state.current, false);
+else clearPlayer();
+autoDetectAll();
+</script>
+</body>
+</html>
